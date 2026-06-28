@@ -16,12 +16,14 @@
 #include <godot_cpp/classes/input_event_mouse.hpp>
 #include <godot_cpp/classes/input_event_mouse_motion.hpp>
 #include <godot_cpp/classes/input_event_mouse_button.hpp>
+#include <godot_cpp/classes/time.hpp>
 
 using namespace godot;
 
 struct ImGui_ImplGodot_Data
 {
     CharString ClipboardTextData;
+    uint64_t Time = 0;
 };
 
 static ImGui_ImplGodot_Data* ImGui_ImplGodot_GetBackendData()
@@ -43,7 +45,7 @@ static const char* ImGui_ImplGodot_GetClipboardText(ImGuiContext*)
     return data->ClipboardTextData.get_data();
 }
 
-static void ImGui_ImplGodot_SetClipboardText(const char* text)
+static void ImGui_ImplGodot_SetClipboardText(ImGuiContext*, const char* text)
 {
     ImGui_ImplGodot_Data* data = ImGui_ImplGodot_GetBackendData();
 
@@ -376,4 +378,38 @@ bool ImGui_ImplGodot_ProcessEvent(const Ref<InputEvent>& event)
     }
 
     return false;
+}
+
+bool ImGui_ImplGodot_Init()
+{
+    ImGuiIO& io = ImGui::GetIO();
+    IMGUI_CHECKVERSION();
+    IM_ASSERT(io.BackendPlatformUserData == nullptr && "Already initialized a platform backend!");
+
+    ImGui_ImplGodot_Data* bd = IM_NEW(ImGui_ImplGodot_Data)();
+
+    io.BackendPlatformUserData = (void*)bd;
+    io.BackendPlatformName = "godot";
+
+    ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
+    platform_io.Platform_SetClipboardTextFn = ImGui_ImplGodot_SetClipboardText;
+    platform_io.Platform_GetClipboardTextFn = ImGui_ImplGodot_GetClipboardText;
+
+    bd->Time = Time::get_singleton()->get_ticks_usec();
+    return true;
+}
+
+void ImGui_ImplGodot_NewFrame()
+{
+    ImGuiIO& io = ImGui::GetIO();
+    ImGui_ImplGodot_Data* bd = ImGui_ImplGodot_GetBackendData();
+
+    uint64_t current_time = Time::get_singleton()->get_ticks_usec();
+
+    //add 1ms
+    if(current_time <= bd->Time)
+        current_time = bd->Time + 1000;
+
+    io.DeltaTime = bd->Time > 0 ? (float)((double)(current_time - bd->Time) / (1000. * 1000.)) : 1.f/60.f;
+    bd->Time = current_time;
 }
