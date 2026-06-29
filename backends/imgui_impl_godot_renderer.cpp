@@ -294,7 +294,7 @@ bool render_init()
 }
 
 
-void render(RID fb, ImDrawData* drawData)
+void render_viewport(RID fb, ImDrawData* drawData)
 {
     RenderingDevice* rd = RenderingServer::get_singleton()->get_rendering_device();
 
@@ -385,4 +385,9 @@ void render(RID fb, ImDrawData* drawData)
         globalVtxOffset += cmdList->VtxBuffer.Size;
     }
     rd->draw_list_end();
+}
+
+void render()
+{
+
 }
